@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>מפציץ הנפט</title>
+<title>שאגת הארי</title>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -181,8 +181,8 @@ body,html{width:100%;height:100%;background:#0a0a0f;overflow:hidden;touch-action
     <canvas id="menuCanvas"></canvas>
     <div class="menu-content">
       <div class="menu-top">
-        <div class="menu-title" id="gameTitle">מפציץ הנפט</div>
-        <div class="menu-subtitle">OIL BOMBER</div>
+        <div class="menu-title" id="gameTitle">שאגת הארי</div>
+        <div class="menu-subtitle">LION'S ROAR</div>
         <div class="game-over-text hidden" id="gameOverText">GAME OVER</div>
         <div class="final-score hidden" id="finalScoreText">ניקוד סופי: <span id="finalScoreVal">0</span></div>
         <div class="name-input-wrap hidden" id="nameInputWrap">
@@ -295,15 +295,15 @@ function renderLB(highlightScore){
   });
 }
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-saveScoreBtn.addEventListener('click',()=>{
+function saveCurrentScore(){
   if(lastSavedScore===score)return;
   lastSavedScore=score;
   const name=playerNameEl.value.trim()||'טייס אלמוני';
   addScore(name,score);renderLB();
   nameInputWrap.classList.add('hidden');
-  // Remember name for next time
   try{localStorage.setItem('oilbomber_name',name);}catch(e){}
-});
+}
+saveScoreBtn.addEventListener('click',saveCurrentScore);
 playerNameEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveScoreBtn.click();}});
 
 let W, H, GL; // width, height, groundLevel
@@ -420,7 +420,7 @@ document.getElementById('btnBomb').addEventListener('touchstart',e=>{e.preventDe
 document.getElementById('btnBomb').addEventListener('mousedown',()=>{if(gameState===S_PLAY)player.fireBomb();});
 document.getElementById('btnMissile').addEventListener('touchstart',e=>{e.preventDefault();sfx.go();if(gameState===S_PLAY)player.fireMissile();});
 document.getElementById('btnMissile').addEventListener('mousedown',()=>{if(gameState===S_PLAY)player.fireMissile();});
-startBtn.addEventListener('click',()=>{sfx.go();startMusic();initGame();});
+startBtn.addEventListener('click',()=>{sfx.go();if(gameState===S_OVER)saveCurrentScore();startMusic();initGame();});
 
 // ── Cloud ──
 class Cloud{
