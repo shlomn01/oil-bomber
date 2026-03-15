@@ -279,13 +279,56 @@ const lbWrap        = document.getElementById('lbWrap');
 const lbBody        = document.getElementById('lbBody');
 const lbEmpty       = document.getElementById('lbEmpty');
 
-// ── Leaderboard (localStorage) ──
-const LB_KEY='oilbomber_leaderboard';
-function getLB(){try{return JSON.parse(localStorage.getItem(LB_KEY))||[];}catch(e){return[];}}
-function saveLB(lb){localStorage.setItem(LB_KEY,JSON.stringify(lb));}
+// ── Game state constants (needed early for leaderboard) ──
+const S_MENU=0, S_PLAY=1, S_OVER=2;
+let gameState=S_MENU;
+
+// ── Cloud Leaderboard (Firebase REST API) ──
+const FB_URL = 'https://lion-roar-3c5ab-default-rtdb.firebaseio.com';
+const LB_KEY = 'oilbomber_leaderboard';
+let cachedLB = [];
+try { cachedLB = JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch(e) {}
+
+function getLB(){ return cachedLB; }
+
+function saveLBLocal(lb){
+  try { localStorage.setItem(LB_KEY, JSON.stringify(lb)); } catch(e) {}
+}
+
+function loadLBFromCloud(){
+  if(FB_URL.includes('PUT-YOUR')) return Promise.resolve(cachedLB);
+  return fetch(FB_URL + '/leaderboard.json?orderBy="score"&limitToLast=10')
+    .then(r => r.json())
+    .then(data => {
+      if(!data) return cachedLB;
+      const entries = Object.values(data);
+      entries.sort((a,b) => b.score - a.score);
+      if(entries.length > 10) entries.length = 10;
+      cachedLB = entries;
+      saveLBLocal(cachedLB);
+      return entries;
+    })
+    .catch(e => { console.warn('Cloud load failed', e); return cachedLB; });
+}
+
+// Load from cloud on page load
+loadLBFromCloud().then(() => { if(gameState === S_OVER) renderLB(); });
+
 function addScore(name,sc){
-  const lb=getLB();lb.push({name:name.trim()||'טייס אלמוני',score:sc,date:Date.now()});
-  lb.sort((a,b)=>b.score-a.score);if(lb.length>10)lb.length=10;saveLB(lb);return lb;
+  const entry = {name:(name.trim()||'טייס אלמוני'), score:sc, date:Date.now()};
+  // Push to cloud
+  if(!FB_URL.includes('PUT-YOUR')){
+    fetch(FB_URL + '/leaderboard.json', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(entry)
+    }).catch(e => console.warn('Cloud save failed', e));
+  }
+  // Update local cache immediately
+  cachedLB.push(entry);
+  cachedLB.sort((a,b) => b.score - a.score);
+  if(cachedLB.length > 10) cachedLB.length = 10;
+  saveLBLocal(cachedLB);
+  return cachedLB;
 }
 let lastSavedScore=-1; // prevent double saves
 function renderLB(highlightScore){
@@ -318,8 +361,6 @@ playerNameEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault
 
 let W, H, GL; // width, height, groundLevel
 let animId, lastTime=0;
-const S_MENU=0, S_PLAY=1, S_OVER=2;
-let gameState=S_MENU;
 let score=0, lives=3, spd=4, frames=0, combo=0, comboT=0, shake=0;
 let player;
 let bombs=[], pMiss=[], gObjs=[], eBullets=[], eMiss=[], ePlanes=[], parts=[], clouds=[];
